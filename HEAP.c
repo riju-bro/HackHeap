@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include "HEAP.h"
 
 #define HEAP_CAP 10000
 #define HEAP_ALLOCED_CAP 1024
@@ -50,13 +51,6 @@ void console_de_alloced()
 										DE_ALLOCED_PTR[i].size);
 	
 }
-int main()
-{
-	int *ptr = (int*) heap_alloc(4);
-	*ptr = 444;
-	printf("*ptr: %d \t ptr: %p \n", *ptr, ptr);
-}
-
 
 char* heap_alloc(size_t size){
 
