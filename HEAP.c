@@ -63,11 +63,11 @@ char* heap_alloc(size_t size){
 
 	// check the DE_ALLOCED_PTR can afford the requirement
 	int i;
-	for(i = 0; i < heap_alloced_size; i++)
+    for(i = 0; i < de_alloced_size; i++)
 		if(size <= DE_ALLOCED_PTR[i].size)
 			break;
 	
-	if(i != heap_alloced_size){
+    if(i != de_alloced_size){
 
 		// allocating the memmory
 		allocated_ptr = DE_ALLOCED_PTR[i].ptr;
@@ -80,10 +80,13 @@ char* heap_alloc(size_t size){
 			memset(&DE_ALLOCED_PTR[--de_alloced_size], 0, sizeof(DE_ALLOCED));
 		}
 		// DE_ALLOCED_PTR[i].size is greater than sufficient size
-		else
-			DE_ALLOCED_PTR[i].size -= size;
-	}
-	else{	
+        else
+        {
+            DE_ALLOCED_PTR[i].ptr += size;
+            DE_ALLOCED_PTR[i].size -= size;
+        }
+
+    }else{
 		// check heap can afford the requirement
 		assert(heap_size + size <= HEAP_CAP);
 
