@@ -2,10 +2,12 @@
 #include <assert.h>
 #include <string.h>
 #include "HEAP.h"
+#include <stdbool.h>
 
 #define HEAP_CAP 10000
-#define HEAP_ALLOCED_CAP 1024
-#define DE_ALLOCED_PTR_CAP 1024
+#define ALLOCED_CAP 1024
+#define DE_ALLOCED_CAP 1024
+#define ll long long int
 
 char heap[HEAP_CAP] = {0};
 size_t heap_size = 0;
@@ -14,42 +16,44 @@ size_t heap_size = 0;
 typedef struct{
 	char* ptr;
 	size_t size;
-} HEAP_ALLOCED;
+    bool deleted;
+} ALLOCED;
 
 typedef struct
 {
 	char* ptr;
 	size_t size;
+    bool deleted;
 }DE_ALLOCED;
 
 
-HEAP_ALLOCED HEAP_ALLOCED_PTR[HEAP_ALLOCED_CAP] = {0};
-size_t heap_alloced_size = 0;
-
-DE_ALLOCED DE_ALLOCED_PTR[DE_ALLOCED_PTR_CAP] = {0};
-size_t de_alloced_size = 0;
+ALLOCED ALLOCED_PTR[ALLOCED_CAP] = {0};
+DE_ALLOCED DE_ALLOCED_PTR[DE_ALLOCED_CAP] = {0};
 
 char* heap_alloc(size_t);
 void heap_dealloc(char* ptr);
+void insert_alloced(char* ptr, size_t size);
+void insert_dealloced(char* ptr, size_t size);
 int contains_alloced(char* ptr);
 int contains_dealloced(char* ptr);
 
 // console the heap_alloced_ptr array
 void console_heapalloced()
 {
-	for (size_t i = 0; i < heap_alloced_size; i++)
-		printf("ptr: %p \t size: %lu\n", HEAP_ALLOCED_PTR[i].ptr,
-										HEAP_ALLOCED_PTR[i].size);
+    for (size_t i = 0; i < ALLOCED_CAP; i++)
+        if(ALLOCED_PTR[i].ptr != 0)
+            printf("ptr: %p \t size: %lu\n", ALLOCED_PTR[i].ptr,
+                                            ALLOCED_PTR[i].size);
 	
 }
 
 // console the de_alloced_ptr array
 void console_de_alloced()
 {
-	for (size_t i = 0; i < de_alloced_size; i++)
-		printf("ptr: %p \t size: %lu\n", DE_ALLOCED_PTR[i].ptr,
-										DE_ALLOCED_PTR[i].size);
-	
+    for (size_t i = 0; i < DE_ALLOCED_CAP; i++)
+        if(DE_ALLOCED_PTR[i].ptr != 0)
+            printf("ptr: %p \t size: %lu\n", DE_ALLOCED_PTR[i].ptr,
+                                        DE_ALLOCED_PTR[i].size);
 }
 
 char* heap_alloc(size_t size){
@@ -58,35 +62,34 @@ char* heap_alloc(size_t size){
 	if(size <= 0)
 		return NULL;
 
-	HEAP_ALLOCED chunk;
 	char *allocated_ptr;
 
 	// check the DE_ALLOCED_PTR can afford the requirement
 	int i;
-    for(i = 0; i < de_alloced_size; i++)
+    // first fit searching alogorithm
+    // FIXME this searching may cause traversing the whole DE_ALLOCED_PTR array.
+    for(i = 0; i < DE_ALLOCED_CAP; i++)
 		if(size <= DE_ALLOCED_PTR[i].size)
 			break;
 	
-    if(i != de_alloced_size){
+    if(i != DE_ALLOCED_CAP){
 
 		// allocating the memmory
 		allocated_ptr = DE_ALLOCED_PTR[i].ptr;
 		if(DE_ALLOCED_PTR[i].size == size)
-		{
-			// removing information from DE_ALLOCED_PTR of alloced size
-			DE_ALLOCED_PTR[i] = DE_ALLOCED_PTR[de_alloced_size-1];
-
-			// popping last element and decrementing the de_alloced_size
-			memset(&DE_ALLOCED_PTR[--de_alloced_size], 0, sizeof(DE_ALLOCED));
-		}
+        {
+            // deleting the elemnt from the DE_ALLOCED_PTR
+            memset(DE_ALLOCED_PTR+i, 0, sizeof(DE_ALLOCED));
+            DE_ALLOCED_PTR[i].deleted = true;
+        }
 		// DE_ALLOCED_PTR[i].size is greater than sufficient size
         else
         {
             DE_ALLOCED_PTR[i].ptr += size;
-            DE_ALLOCED_PTR[i].size -= size;
+			DE_ALLOCED_PTR[i].size -= size;
         }
-
-    }else{
+	}
+	else{	
 		// check heap can afford the requirement
 		assert(heap_size + size <= HEAP_CAP);
 
@@ -95,13 +98,8 @@ char* heap_alloc(size_t size){
 		heap_size += size;
 	}
 	// keep tracking the allocated memmory
-	chunk.ptr = allocated_ptr;
-	chunk.size = size;
-
-	// insert alloced chunks to HEAP_ALLOCED_PTR
-	HEAP_ALLOCED_PTR[heap_alloced_size++] = chunk;
-
-	return allocated_ptr;
+    insert_alloced(allocated_ptr, size);
+    return allocated_ptr;
 }
 
 void heap_dealloc(char* ptr)
@@ -109,55 +107,121 @@ void heap_dealloc(char* ptr)
 	int i = contains_alloced(ptr);
 
 	// invalid ptr
-	if(i == heap_alloced_size)
+    if(i == ALLOCED_CAP)
 		return;
 	
 	// clean the memmory
-	size_t size = HEAP_ALLOCED_PTR[i].size;
+    size_t size = ALLOCED_PTR[i].size;
 	memset(ptr, 0, size);
 	
 	// removing informations of deallocated memmory from HEAP_ALLOCED_PTR
-	HEAP_ALLOCED_PTR[i] = HEAP_ALLOCED_PTR[heap_alloced_size-1];
-
-	// decrementing the heap_alloced_size and popping last element
-	memset(&HEAP_ALLOCED_PTR[--heap_alloced_size], 0, sizeof(HEAP_ALLOCED));
+    memset(ALLOCED_PTR + i, 0, sizeof (ALLOCED));
+    ALLOCED_PTR[i].deleted = true;
 
 	// check deallocated ptr is contigous part of any DE_ALLOCED_PTR
 	int ind = contains_dealloced(ptr);
 
-	// memmory are contigous 
-	if(ind != de_alloced_size)
-		DE_ALLOCED_PTR[ind].size += size;
-
-	else{
-		// pushing deallocated elements
-		DE_ALLOCED chunk = {
-			.ptr = ptr,
-			size = size
-		};
-		DE_ALLOCED_PTR [de_alloced_size++] = chunk;
-	}
+    // ptr is contigous of DE_ALLOCED_PTR[ind]
+    if(ind != DE_ALLOCED_CAP){
+        size += DE_ALLOCED_PTR[ind].size;
+        ptr = DE_ALLOCED_PTR[ind].ptr;
+        // ptr is contiguous of DE_ALLOCED_PTR[ind] so deletion and new insertion is needed
+        memset(DE_ALLOCED_PTR + ind, 0, sizeof (DE_ALLOCED));
+        DE_ALLOCED_PTR[ind].deleted = true;
+        insert_dealloced(ptr, size);
+    }
+    else
+        insert_dealloced(ptr, size);
 }
 
-// FIXME operation tiem is O(de_alloced_size) for a ptr
+// functions for insert and search using hash table
+// search and insert O(1)
+
+void insert_alloced(char* ptr, size_t size)
+{
+    int i = (ll) ptr % ALLOCED_CAP;
+    // FIXME: EXCEPTION if HEAP_ALLOCED_PTR is filled it will cause to infinite loop
+    // search for empty space in ALLOCED_PTR
+    while(ALLOCED_PTR[i].ptr != 0)
+        // linear probing in open addressing
+        i = (i + 1) % ALLOCED_CAP;
+    ALLOCED_PTR[i].ptr = ptr;
+    ALLOCED_PTR[i].size = size;
+}
+
+void insert_dealloced(char* ptr, size_t size)
+{
+    int i = (ll) (ptr+size) % DE_ALLOCED_CAP;
+    // FIXME: EXCEPTION if HEAP_ALLOCED_PTR is filled it will cause to infinite loop
+    // search for empty space in ALLOCED_PTR
+    while(DE_ALLOCED_PTR[i].ptr != 0)
+        // linear probing in open addressing
+        i = (i + 1) % ALLOCED_CAP;
+    DE_ALLOCED_PTR[i].ptr = ptr;
+    DE_ALLOCED_PTR[i].size = size;
+
+}
+
 // returns index if ptr is valid else heap_alloced_size
 int contains_alloced(char* ptr)
 {
-	int i = 0;
-	for (i = 0; i < heap_alloced_size; i++)
-		if(ptr == HEAP_ALLOCED_PTR[i].ptr)
-			break;
-	return i;
+    int hashed_ind = (ll) ptr % ALLOCED_CAP;
+    int i = hashed_ind;
+    // linear probing in open addressing
+    do{
+        // ptr found
+        if(ALLOCED_PTR[i].ptr == ptr)
+            return i;
+        // empty slot found and not deleted
+        // if a empty slot found and deleted it wont' stop the search
+        else if(ALLOCED_PTR[i].ptr == 0 && !ALLOCED_PTR[i].deleted)
+            break;
+        i = (i+1) % ALLOCED_CAP;
+    }while(i != hashed_ind);
+    // ptr not found
+    return ALLOCED_CAP;
 }
 
-// FIXME operation tiem is O(de_alloced_size) for a ptr	
 int contains_dealloced(char* ptr)
 {
-	// check the any memmory adjascent to ptr
-	int i;
-	for (i = 0; i < de_alloced_size; i++)
-		if(DE_ALLOCED_PTR[i].ptr + DE_ALLOCED_PTR[i].size == ptr)
-			break;
-	return i;	
+    int hashed_ind = (ll) ptr % DE_ALLOCED_CAP;
+    int i = hashed_ind;
+
+    char *temp_ptr;
+    size_t temp_size;
+    do{
+        // ptr found
+        temp_ptr = DE_ALLOCED_PTR[i].ptr;
+        temp_size = DE_ALLOCED_PTR[i].size;
+        if(ptr == temp_ptr + temp_size)
+            return i;
+        else if(ptr == 0 && !DE_ALLOCED_PTR[i].deleted)
+            break;
+        i = (i + 1) % DE_ALLOCED_CAP;
+    }while(i != hashed_ind);
+    return DE_ALLOCED_CAP;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
