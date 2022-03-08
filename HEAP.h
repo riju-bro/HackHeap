@@ -1,9 +1,9 @@
 #ifndef HEAP_H_
-#define HEAp_H_
+#define HEAP_H_
 
-char* heap_alloc(size_t);
-void heap_dealloc(char* ptr);
-void console_heapalloced();
-void console_de_alloced();
+extern char* heap_alloc(size_t);
+extern void heap_dealloc(char* ptr);
+extern void console_alloced();
+extern void console_dealloced();
 
 #endif
