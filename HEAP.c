@@ -14,14 +14,14 @@ size_t heap_size = 0;
 
 // components needed to keep track of allocated memmory
 typedef struct{
-	char* ptr;
+	void* ptr;
 	size_t size;
     bool deleted;
 }ALLOCED;
 
 typedef struct
 {
-	char* ptr;
+	void* ptr;
 	size_t size;
 }DEALLOCED;
 
@@ -30,11 +30,11 @@ ALLOCED ALLOCED_PTR[ALLOCED_CAP] = {0};
 DEALLOCED DEALLOCED_PTR[DEALLOCED_CAP] = {0};
 size_t dealloced_size = 0;
 
-char* heap_alloc(size_t);
-void heap_dealloc(char* ptr);
-void insert_alloced(char* ptr, size_t size);
-int contains_alloced(char* ptr);
-void insert_or_merge_dealloced(char* ptr, size_t size);
+void* heap_alloc(size_t);
+void heap_dealloc(void* ptr);
+void insert_alloced(void* ptr, size_t size);
+int contains_alloced(void* ptr);
+void insert_or_merge_dealloced(void* ptr, size_t size);
 void remove_dealloced(int i);
 
 // console the ALLOCED_PTR array
@@ -60,7 +60,12 @@ void console_dealloced()
 
 }
 
-char* heap_alloc(size_t size){
+bool is_alloced(void* ptr)
+{
+    return contains_alloced(ptr) != ALLOCED_CAP;
+}
+
+void* heap_alloc(size_t size){
 
 	// return null if size is invalid
 	if(size <= 0)
@@ -74,7 +79,7 @@ char* heap_alloc(size_t size){
         if(size <= DEALLOCED_PTR[i].size)
 			break;
 	
-    char* allocated_ptr;
+    void* allocated_ptr;
 
     // DEALLOCED_PTR can afford the requirement
     if(i != dealloced_size)
@@ -101,7 +106,7 @@ char* heap_alloc(size_t size){
     return allocated_ptr;
 }
 
-void heap_dealloc(char* ptr)
+void heap_dealloc(void* ptr)
 {
 	int i = contains_alloced(ptr);
 
@@ -119,7 +124,7 @@ void heap_dealloc(char* ptr)
 
 // functions for insert using hash table
 // insert O(1)
-void insert_alloced(char* ptr, size_t size)
+void insert_alloced(void* ptr, size_t size)
 {
     int i = (ll) ptr % ALLOCED_CAP;
     // FIXME: EXCEPTION if HEAP_ALLOCED_PTR is filled it will cause to infinite loop
@@ -134,7 +139,7 @@ void insert_alloced(char* ptr, size_t size)
 // functions for search using hash table
 // search O(1)
 // returns index if ptr is valid else ALLOCED_CAP
-int contains_alloced(char* ptr)
+int contains_alloced(void* ptr)
 {
     int hashed_ind = (ll) ptr % ALLOCED_CAP;
     int i = hashed_ind;
@@ -153,7 +158,7 @@ int contains_alloced(char* ptr)
     return ALLOCED_CAP;
 }
 
-void insert_or_merge_dealloced(char* ptr, size_t size)
+void insert_or_merge_dealloced(void* ptr, size_t size)
 {
     // Search for the adjacent memory block to the (heap + heap_size).
     if((heap + heap_size) - size == ptr){
