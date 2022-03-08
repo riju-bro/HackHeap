@@ -9,7 +9,7 @@ struct Node{
 };
 
 Node *createNewNode(int value) {
-    Node *temp = (Node*)heap_alloc(sizeof(Node));
+    Node *temp = heap_alloc(sizeof(Node));
     temp->data = value;
     temp->left = temp->right = NULL;
     return temp;
