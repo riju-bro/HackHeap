@@ -10,7 +10,9 @@
 #define HEAP_CAP HEAP_CAP_BYTES / 8
 #define ALLOCED_CAP 1024
 #define DEALLOCED_CAP 1024
+#define REACHABLE_CAP 1024
 #define ll long long int
+
 
 uintptr_t heap[HEAP_CAP] = {0};
 size_t heap_size = 0;
@@ -30,15 +32,23 @@ typedef struct
 
 
 ALLOCED ALLOCED_PTR[ALLOCED_CAP] = {0};
+size_t alloced_size = 0;
 DEALLOCED DEALLOCED_PTR[DEALLOCED_CAP] = {0};
 size_t dealloced_size = 0;
+uintptr_t REACHABLE_PTR[REACHABLE_CAP];
+size_t reachable_size = 0;
 
 void* heap_alloc(size_t);
-void heap_dealloc(void* ptr);
 void insert_alloced(void* ptr, size_t size);
 int contains_alloced(void* ptr);
+
+void heap_dealloc(void* ptr);
 void insert_or_merge_dealloced(void* ptr, size_t size);
 void remove_dealloced(int i);
+
+void heap_collect(uintptr_t* stack_end);
+void heap_collect_helper(uintptr_t* ptr);
+void insert_reachable(uintptr_t ptr);
 
 // console the ALLOCED_PTR array
 void console_alloced()
@@ -48,6 +58,11 @@ void console_alloced()
             printf("ptr: %p \t byte_size: %lu\n", ALLOCED_PTR[i].ptr,
                                             ALLOCED_PTR[i].size * 8);
 	
+}
+
+bool is_alloced(void* ptr)
+{
+    return contains_alloced(ptr) != ALLOCED_CAP;
 }
 
 // console the DEALLOCED_PTR array
@@ -63,9 +78,14 @@ void console_dealloced()
 
 }
 
-bool is_alloced(void* ptr)
+void console_reachable_chunks()
 {
-    return contains_alloced(ptr) != ALLOCED_CAP;
+    for(int i = 0; i < REACHABLE_CAP; i++)
+    {
+        if(REACHABLE_PTR[i] == 0)
+            continue;
+        printf("%p \n", (void*) REACHABLE_PTR[i]);
+    }
 }
 
 void* heap_alloc(size_t byte_size){
@@ -130,18 +150,41 @@ void heap_dealloc(void* ptr)
     insert_or_merge_dealloced(ptr, size);
 }
 
+// garbage collector
+void heap_collect(uintptr_t* stack_end)
+{
+    uintptr_t* stack_start = __builtin_frame_address(0);
+
+    // insert reachable heap pointers to REACHABLE_PTR array
+    for(; stack_start <= stack_end; stack_start += 1)
+    {
+        uintptr_t* p = (uintptr_t*) *stack_start;
+
+        int ind = contains_alloced((void*) p);
+        size_t size = ALLOCED_PTR[ind].size;
+        // p is allocated
+        if(ind != ALLOCED_CAP)
+        {
+            insert_reachable((uintptr_t) p);
+            for(int i = 0; i < size; i++)
+                heap_collect_helper((uintptr_t*) *(p+i));
+        }
+    }
+}
+
 // functions for insert using hash table
 // insert O(1)
 void insert_alloced(void* ptr, size_t size)
 {
+    assert(alloced_size < ALLOCED_CAP);
+
     int i = (ll) ptr % ALLOCED_CAP;
-    // FIXME: EXCEPTION if HEAP_ALLOCED_PTR is filled it will cause to infinite loop
-    // search for empty space in ALLOCED_PTR
     while(ALLOCED_PTR[i].ptr != 0)
         // linear probing in open addressing    
         i = (i + 1) % ALLOCED_CAP;
     ALLOCED_PTR[i].ptr = ptr;
     ALLOCED_PTR[i].size = size;
+    alloced_size++;
 }
 
 // functions for search using hash table
@@ -216,10 +259,29 @@ void remove_dealloced(int i)
     memset(DEALLOCED_PTR + dealloced_size, 0, sizeof(DEALLOCED));
 }
 
+void heap_collect_helper(uintptr_t* ptr)
+{
+    int ind = contains_alloced(ptr);
+    size_t size = ALLOCED_PTR[ind].size;
+    if(ind != ALLOCED_CAP)
+    {
+        insert_reachable((uintptr_t) ptr);
+        for(int i = 0; i < size; i++)
+            heap_collect_helper((uintptr_t*) *(ptr+i));
+    }
+}
 
+void insert_reachable(uintptr_t ptr)
+{
+    assert(reachable_size < REACHABLE_CAP);
 
-
-
+    int i = ptr % ALLOCED_CAP;
+    while(REACHABLE_PTR[i] != 0)
+        // linear probing in open addressing
+        i = (i + 1) % REACHABLE_CAP;
+    REACHABLE_PTR[i]= ptr;
+    reachable_size++;
+}
 
 
 

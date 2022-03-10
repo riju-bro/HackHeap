@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "HEAP.h"
+#include <stdint.h>
 
 typedef struct Node Node;
 struct Node{
@@ -54,6 +55,7 @@ void inorder(Node *root) {
 // { Driver Code Starts.
 
 int main() {
+    uintptr_t* stack_end = (uintptr_t*) __builtin_frame_address(0);
     Node *root = createNewNode(10);
     int n;
     printf("Enter the number of Elements: ");
@@ -70,6 +72,13 @@ int main() {
     console_alloced();
     printf("\n DEALLOCED_PTR \n ---------------------------------------------- \n");
     console_dealloced();
+
+    // We leek the memory
+    root->right = NULL;
+    heap_collect(stack_end);
+
+    printf("\n REACHABLE_CHUNKS \n ---------------------------------------------- \n");
+    console_reachable_chunks();
 
     return 0;
 }
