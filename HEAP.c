@@ -3,13 +3,16 @@
 #include <string.h>
 #include "HEAP.h"
 #include <stdbool.h>
+#include <stdint.h>
 
-#define HEAP_CAP 10000
+
+#define HEAP_CAP_BYTES 80000
+#define HEAP_CAP HEAP_CAP_BYTES / 8
 #define ALLOCED_CAP 1024
 #define DEALLOCED_CAP 1024
 #define ll long long int
 
-char heap[HEAP_CAP] = {0};
+uintptr_t heap[HEAP_CAP] = {0};
 size_t heap_size = 0;
 
 // components needed to keep track of allocated memmory
@@ -42,8 +45,8 @@ void console_alloced()
 {
     for (size_t i = 0; i < ALLOCED_CAP; i++)
         if(ALLOCED_PTR[i].ptr != 0)
-            printf("ptr: %p \t size: %lu\n", ALLOCED_PTR[i].ptr,
-                                            ALLOCED_PTR[i].size);
+            printf("ptr: %p \t byte_size: %lu\n", ALLOCED_PTR[i].ptr,
+                                            ALLOCED_PTR[i].size * 8);
 	
 }
 
@@ -52,11 +55,11 @@ void console_dealloced()
 {
     for (size_t i = 0; i < dealloced_size; i++)
         printf("ptr: %p \t size: %lu\n", DEALLOCED_PTR[i].ptr,
-                                    DEALLOCED_PTR[i].size);
+                                    DEALLOCED_PTR[i].size * 8);
 
     // console the remaning chunks size in heap array
-    printf("ptr: %p \t size: %zu\n", heap + heap_size,
-                                HEAP_CAP - heap_size);
+    printf("ptr: %p \t byte_size: %zu\n", heap + heap_size,
+                                (HEAP_CAP - heap_size) * 8);
 
 }
 
@@ -65,12 +68,17 @@ bool is_alloced(void* ptr)
     return contains_alloced(ptr) != ALLOCED_CAP;
 }
 
-void* heap_alloc(size_t size){
+void* heap_alloc(size_t byte_size){
 
 	// return null if size is invalid
-	if(size <= 0)
+    if(byte_size <= 0)
 		return NULL;
 
+    size_t size;
+    if(byte_size % 8 == 0)
+        size = byte_size / 8;
+    else
+        size = byte_size / 8 + 1;
 
     // check the DEALLOCED_PTR can afford the requirement
 	int i;
