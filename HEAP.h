@@ -4,11 +4,11 @@
 #include <stdint.h>
 
 extern void* heap_alloc(size_t);
-extern void heap_dealloc(void* ptr);
+extern void heap_dealloc(void* void_ptr);
 extern void heap_collect(uintptr_t* stack_end);
 
 extern void console_alloced();
-extern bool is_alloced(void* ptr);
+extern bool is_alloced(uintptr_t* ptr);
 extern void console_dealloced();
 extern void console_reachable_chunks();
 

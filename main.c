@@ -80,6 +80,11 @@ int main() {
     printf("\n REACHABLE_CHUNKS \n ---------------------------------------------- \n");
     console_reachable_chunks();
 
+    printf("\n ALLOCED_PTR after calling the heap_collect()\n ---------------------------------------------- \n");
+    console_alloced();
+    printf("\n DEALLOCED_PTR after calling the heap_colloct()\n ---------------------------------------------- \n");
+    console_dealloced();
+
     return 0;
 }
 
